@@ -27,6 +27,7 @@ BouncingCritter.prototype.act = function (view) {
 function WallFollower () {
   this.dir = 's'
   this.color = 'yellow'
+  this.energy = 100
 }
 WallFollower.prototype.act = function (view) {
   var start = this.dir
@@ -62,52 +63,11 @@ function PlantEater () {
 PlantEater.prototype.act = function (view) {
   var space = view.find(' ')
   if (this.energy > 60 && space) return {type: 'reproduce', direction: space}
-  var plant = view.find('*')
-  if (plant) return {type: 'eat', direction: plant}
+  // var plant = view.find('*')
+  // if (plant) return {type: 'eat', direction: plant}
   if (space) return {type: 'move', direction: space}
 }
 
-var actionTypes = Object.create(null)
-
-actionTypes.grow = function (critter) {
-  critter.energy += 0.5
-  return true
-}
-
-actionTypes.move = function(critter, vector, action) {
-  var dest = this.checkDestination(action, vector)
-  if (dest == null ||
-      critter.energy <= 1 ||
-      this.grid.get(dest) != null)
-    return false;
-  critter.energy -= 1
-  this.grid.set(vector, null)
-  this.grid.set(dest, critter)
-  return true
-};
-
-actionTypes.eat = function (critter, vector, action) {
-  var dest = this.checkDestination(action, vector)
-  var atDest = dest != null && this.grid.get(dest)
-  if (!atDest || atDest.energy == null)
-    return false
-  critter.energy += atDest.energy;
-  this.grid.set(dest, null)
-  return true
-}
-
-actionTypes.reproduce = function(critter, vector, action) {
-  var baby = elementFromChar(this.legend,
-                             critter.originChar);
-  var dest = this.checkDestination(action, vector);
-  if (dest == null ||
-      critter.energy <= 2 * baby.energy ||
-      this.grid.get(dest) != null)
-    return false;
-  critter.energy -= 2 * baby.energy;
-  this.grid.set(dest, baby);
-  return true;
-};
 // SmartPlantEater
 // Does not breed very fast, which makes the cycles between abundance and famine intense.
 // Does not wipe out the local plant life
@@ -149,23 +109,16 @@ function Grid (width, height) {
   this.height = height
   this.space = new Array(width * height)
 }
-Grid.prototype.isInside = function (vector) {
-  return vector.x >= 0 && vector.x < this.width && vector.y >= 0 && vector.y < this.height
-}
 
-Grid.prototype.forEach = function (f, context) {
-  for (var y = 0; y < this.height; y++) {
-    for (var x = 0; x < this.width; x++) {
-      var value = this.space[x + this.width * y]
-      if (value !== null) f.call(context, value, new Vector(x, y))
-    }
-  }
-}
 Grid.prototype.get = function (vector) {
   return this.space[vector.x + this.width * vector.y]
 }
 Grid.prototype.set = function (vector, value) {
   this.space[vector.x + this.width * vector.y] = value
+}
+
+Grid.prototype.isInside = function (vector) {
+  return vector.x >= 0 && vector.x < this.width && vector.y >= 0 && vector.y < this.height
 }
 
 Grid.prototype.forEach = function (f, context) {
@@ -211,23 +164,25 @@ const ecosystem = require('./ecosystem')
 const world = require('./world')
 
 var myWorld = new world.LifelikeWorld(
-             ['############################',
-              '#      #    #      o      ##',
-              '#                          #',
-              '#          #####           #',
-              '##         #   #    ##     #',
-              '###           ##     #     #',
-              '#           ###      # *   #',
-              '#   ####          ~  *     #',
-              '#   ##       o             #',
-              '# o  #         o       ### #',
-              '#    #                     #',
-              '############################'],
-  {'#': ecosystem.Wall,
-   '~': ecosystem.WallFollower,
-   'o': ecosystem.BouncingCritter,
-   '*': ecosystem.Plant,
-   '@': ecosystem.PlantEater}
+  ['############################',
+    '#      #    #            *##',
+    '#   ~                      #',
+    '#          #####       o   #',
+    '##   *     #   #    ##     #',
+    '###           ##     #     #',
+    '#    *      ###      #     #',
+    '#   ####          ~        #',
+    '#   ##                     #',
+    '#    #  *       ~  @   ### #',
+    '#  o#  **                  #',
+    '############################'],
+  { '#': ecosystem.Wall,
+    '~': ecosystem.WallFollower,
+    'o': ecosystem.BouncingCritter,
+    '*': ecosystem.Plant,
+    '@': ecosystem.PlantEater,
+    'S': ecosystem.SmartPlantEater
+  }
 )
 var cx = document.querySelector('canvas').getContext('2d')
 
@@ -330,6 +285,7 @@ World.prototype.turn = function () {
       this.letAct(critter, vector)
     }
   }, this)
+  console.log(acted)
 }
 World.prototype.letAct = function (critter, vector) {
   var action = critter.act(new View(this, vector))
@@ -356,11 +312,50 @@ LifelikeWorld.prototype = Object.create(World.prototype)
 
 var actionTypes = Object.create(null)
 
+actionTypes.grow = function (critter) {
+  critter.energy += 0.5
+  return true
+}
+
+actionTypes.move = function (critter, vector, action) {
+  var dest = this.checkDestination(action, vector)
+  if (dest == null || critter.energy <= 1 || this.grid.get(dest) != null) {
+    console.log('not enough energy')
+    return false
+  }
+
+  critter.energy -= 1
+  this.grid.set(vector, null)
+  this.grid.set(dest, critter)
+  return true
+}
+
+actionTypes.eat = function (critter, vector, action) {
+  var dest = this.checkDestination(action, vector)
+  var atDest = dest != null && this.grid.get(dest)
+  if (!atDest || atDest.energy == null)
+    return false
+  critter.energy += atDest.energy;
+  this.grid.set(dest, null)
+  return true
+}
+
+actionTypes.reproduce = function(critter, vector, action) {
+  var baby = elementFromChar(this.legend,
+                             critter.originChar);
+  var dest = this.checkDestination(action, vector);
+  if (dest == null ||
+      critter.energy <= 2 * baby.energy ||
+      this.grid.get(dest) != null)
+    return false;
+  critter.energy -= 2 * baby.energy;
+  this.grid.set(dest, baby);
+  return true;
+}
 LifelikeWorld.prototype.letAct = function (critter, vector) {
   var action = critter.act(new View(this, vector))
-  var handled = action &&
-    action.type in actionTypes &&
-    actionTypes[action.type].call(this, critter, vector, action)
+  var handled = action && action.type in actionTypes && actionTypes[action.type].call(this, critter, vector, action)
+  console.log('handled', action.type in actionTypes)
   if (!handled) {
     critter.energy -= 0.2
     if (critter.energy <= 0) this.grid.set(vector, null)

@@ -3,23 +3,25 @@ const ecosystem = require('./ecosystem')
 const world = require('./world')
 
 var myWorld = new world.LifelikeWorld(
-             ['############################',
-              '#      #    #      o      ##',
-              '#                          #',
-              '#          #####           #',
-              '##         #   #    ##     #',
-              '###           ##     #     #',
-              '#           ###      # *   #',
-              '#   ####          ~  *     #',
-              '#   ##       o             #',
-              '# o  #         o       ### #',
-              '#    #                     #',
-              '############################'],
-  {'#': ecosystem.Wall,
-   '~': ecosystem.WallFollower,
-   'o': ecosystem.BouncingCritter,
-   '*': ecosystem.Plant,
-   '@': ecosystem.PlantEater}
+  ['############################',
+    '#      #    #            *##',
+    '#   ~                      #',
+    '#          #####       o   #',
+    '##   *     #   #    ##     #',
+    '###           ##     #     #',
+    '#    *      ###      #     #',
+    '#   ####          ~        #',
+    '#   ##                     #',
+    '#    #  *       ~  @   ### #',
+    '#  o#  **                  #',
+    '############################'],
+  { '#': ecosystem.Wall,
+    '~': ecosystem.WallFollower,
+    'o': ecosystem.BouncingCritter,
+    '*': ecosystem.Plant,
+    '@': ecosystem.PlantEater,
+    'S': ecosystem.SmartPlantEater
+  }
 )
 var cx = document.querySelector('canvas').getContext('2d')
 

@@ -1,41 +1,39 @@
 var box = {
   locked: true,
-  unlock: function() { this.locked = false; },
-  lock: function() { this.locked = true;  },
+  unlock: function () { this.locked = false },
+  lock: function () { this.locked = true },
   _content: [],
-  get content() {
-    if (this.locked) throw new Error("Locked!");
-    return this._content;
+  get content () {
+    if (this.locked) throw new Error('Locked!')
+    return this._content
   }
-};
+}
 
-function withBoxUnlocked(body) {
+function withBoxUnlocked (body) {
   try {
     if (box.locked) {
       box.unlock()
     }
     body()
-  }
-  catch (e) {
+  } catch (e) {
     console.log(e.message)
-  }
-  finally {
-    if(!box.locked) {
+  } finally {
+    if (!box.locked) {
       box.lock()
     }
   }
 }
 
-withBoxUnlocked(function() {
-  box.content.push("gold piece");
-});
+withBoxUnlocked(function () {
+  box.content.push('gold piece')
+})
 
 try {
-  withBoxUnlocked(function() {
-    throw new Error("Pirates on the horizon! Abort!");
-  });
+  withBoxUnlocked(function () {
+    throw new Error('Pirates on the horizon! Abort!')
+  })
 } catch (e) {
-  console.log("Error raised:", e);
+  console.log('Error raised:', e)
 }
-console.log(box.locked);
+console.log(box.locked)
 // → true
